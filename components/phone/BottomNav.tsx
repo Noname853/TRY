@@ -8,6 +8,7 @@ const items = [
   { href: "/checkin", icon: "💬", label: "Check-in" },
   { href: "/goals", icon: "🎯", label: "Goals" },
   { href: "/reflection", icon: "📊", label: "Refleksi" },
+  { href: "/settings", icon: "⚙️", label: "Setting" },
 ];
 
 export function BottomNav() {

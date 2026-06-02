@@ -1,8 +1,8 @@
 "use client";
 
 import { PhoneShell } from "@/components/phone/PhoneShell";
-import Link from "next/link";
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { completeOnboarding } from "@/app/actions/onboarding.actions";
 
 const categories = [
   { emoji: "💪", label: "Kesehatan" },
@@ -13,7 +13,18 @@ const categories = [
 
 export default function OnboardingPage() {
   const [selected, setSelected] = useState(0);
-  const [name, setName] = useState("Rafi");
+  const [name, setName] = useState("");
+  const [aiName, setAiName] = useState("Luna");
+  const [step, setStep] = useState(0);
+  const [pending, start] = useTransition();
+
+  function submit() {
+    const fd = new FormData();
+    fd.set("name", name || "Teman");
+    fd.set("ai_name", aiName || "Luna");
+    fd.set("goal_category", categories[selected].label);
+    start(() => completeOnboarding(fd));
+  }
 
   return (
     <main className="py-10 px-4">
@@ -28,14 +39,15 @@ export default function OnboardingPage() {
               🌿
             </div>
           </div>
-          <div
-            className="jakarta font-extrabold"
-            style={{ fontSize: "clamp(16px, 5vw, 20px)" }}
-          >
-            Hai, siapa namamu?
+          <div className="jakarta font-extrabold" style={{ fontSize: "clamp(16px, 5vw, 20px)" }}>
+            {step === 0 ? "Hai, siapa namamu?" : step === 1 ? "Beri aku nama" : "Apa fokusmu?"}
           </div>
           <div className="text-[12px] text-[--color-text-muted] mt-1">
-            Aku akan jadi teman perjalananmu
+            {step === 0
+              ? "Aku akan jadi teman perjalananmu"
+              : step === 1
+              ? "Panggil aku apa saja yang kamu suka"
+              : "Pilih satu untuk awal"}
           </div>
         </div>
 
@@ -44,66 +56,80 @@ export default function OnboardingPage() {
             <div
               key={i}
               className={`rounded-full ${
-                i === 0 ? "w-[18px] h-1.5 bg-[--color-accent-teal] rounded-[3px]" : "w-1.5 h-1.5 bg-[--color-text-muted]"
+                i === step
+                  ? "w-[18px] h-1.5 bg-[--color-accent-teal] rounded-[3px]"
+                  : "w-1.5 h-1.5 bg-[--color-text-muted]"
               }`}
-              style={i === 0 ? { boxShadow: "0 0 7px #38BDF8" } : undefined}
+              style={i === step ? { boxShadow: "0 0 7px #38BDF8" } : undefined}
             />
           ))}
         </div>
 
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="bg-[--color-bg-card] border border-[--color-border-base] rounded-2xl px-4 py-3 text-sm text-[--color-text-primary] w-full outline-none mb-2.5"
-          placeholder="Nama panggilanmu"
-        />
+        {step === 0 && (
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="bg-[--color-bg-card] border border-[--color-border-base] rounded-2xl px-4 py-3 text-sm w-full outline-none mb-2.5"
+            placeholder="Nama panggilanmu"
+          />
+        )}
 
-        <div className="my-3 text-[12px] text-[--color-text-muted] font-medium">
-          Tujuan utama kamu:
-        </div>
+        {step === 1 && (
+          <input
+            value={aiName}
+            onChange={(e) => setAiName(e.target.value)}
+            className="bg-[--color-bg-card] border border-[--color-border-base] rounded-2xl px-4 py-3 text-sm w-full outline-none mb-2.5"
+            placeholder="Nama asistenmu (default: Luna)"
+          />
+        )}
 
-        <div className="grid grid-cols-2 gap-2 mb-3.5">
-          {categories.map((c, i) => {
-            const isSel = i === selected;
-            return (
-              <button
-                key={c.label}
-                onClick={() => setSelected(i)}
-                className={`rounded-[13px] py-3 px-2 text-center border ${
-                  isSel
-                    ? "border-[--color-accent-teal] bg-[rgba(56,189,248,0.08)]"
-                    : "border-[--color-border-base] bg-[--color-bg-card]"
-                }`}
-              >
-                <div className="text-[22px] mb-1">{c.emoji}</div>
-                <div
-                  className={`text-[12px] font-medium ${
-                    isSel ? "text-[--color-accent-teal]" : "text-[--color-text-secondary]"
+        {step >= 2 && (
+          <div className="grid grid-cols-2 gap-2 mb-3.5">
+            {categories.map((c, i) => {
+              const isSel = i === selected;
+              return (
+                <button
+                  key={c.label}
+                  onClick={() => setSelected(i)}
+                  className={`rounded-[13px] py-3 px-2 text-center border ${
+                    isSel
+                      ? "border-[--color-accent-teal] bg-[rgba(56,189,248,0.08)]"
+                      : "border-[--color-border-base] bg-[--color-bg-card]"
                   }`}
                 >
-                  {c.label}
-                </div>
-              </button>
-            );
-          })}
-        </div>
+                  <div className="text-[22px] mb-1">{c.emoji}</div>
+                  <div
+                    className={`text-[12px] font-medium ${
+                      isSel ? "text-[--color-accent-teal]" : "text-[--color-text-secondary]"
+                    }`}
+                  >
+                    {c.label}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
-        <Link
-          href="/dashboard"
-          className="block text-center w-full rounded-2xl py-3.5 jakarta text-sm font-bold text-white"
+        <button
+          onClick={() => (step < 2 ? setStep(step + 1) : submit())}
+          disabled={pending || (step === 0 && !name)}
+          className="block text-center w-full rounded-2xl py-3.5 jakarta text-sm font-bold text-white disabled:opacity-60"
           style={{
             background: "linear-gradient(135deg, #38BDF8, #818CF8)",
             boxShadow: "0 4px 16px rgba(56,189,248,0.22)",
           }}
         >
-          Lanjut →
-        </Link>
-        <Link
-          href="/dashboard"
-          className="block text-center w-full glass rounded-2xl py-3 text-[13px] text-[--color-text-secondary] mt-2"
-        >
-          Lewati
-        </Link>
+          {pending ? "Menyimpan…" : step < 2 ? "Lanjut →" : "Mulai"}
+        </button>
+        {step > 0 && (
+          <button
+            onClick={() => setStep(step - 1)}
+            className="block text-center w-full glass rounded-2xl py-3 text-[13px] text-[--color-text-secondary] mt-2"
+          >
+            Kembali
+          </button>
+        )}
       </PhoneShell>
     </main>
   );
