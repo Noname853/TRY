@@ -1,10 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { parseBody, withAuth } from "@/lib/api";
 import { checkinMessageSchema } from "@/lib/validations";
 import { callClaude, type ChatTurn } from "@/lib/claude";
 import { checkinSystemPrompt, systemPrompt } from "@/lib/prompts";
 import { dayOfWeekID, shiftDays, todayISO } from "@/lib/date";
 import { calcStreak } from "@/lib/streak";
+import { extractMemoriesForCheckin } from "@/lib/memory";
 import type { ChatMessage, HabitLogRow } from "@/lib/supabase/types";
 
 export async function POST(request: Request) {
@@ -107,6 +108,15 @@ export async function POST(request: Request) {
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+    // Fire-and-forget memory extraction setelah response terkirim.
+    after(() =>
+      extractMemoriesForCheckin({
+        userId: user.id,
+        userName: profile?.name ?? "Pengguna",
+        messages: merged,
+      }),
+    );
 
     return NextResponse.json({ checkin: saved, reply: aiMsg });
   });

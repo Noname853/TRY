@@ -151,6 +151,40 @@ sebutkan momen spesifik dari memory, motivasi untuk langkah berikutnya.
 Maks 3 pesan singkat, penuh semangat tapi tidak berlebihan.`;
 
 // =============================================================
+// Memory Extraction (Haiku — task simpel, output pendek, volume tinggi)
+// =============================================================
+export const MEMORY_EXTRACTION_PROMPT = (args: {
+  userName: string;
+  conversation: string;
+  existingMemory: string;
+}) => `Kamu adalah ekstraktor memory untuk asisten habit tracking.
+
+Dari percakapan check-in ${args.userName} berikut, ekstrak fakta BARU tentang dirinya
+yang berguna untuk konteks jangka panjang (bukan kondisi sehari).
+
+Memory yang sudah ada (JANGAN ekstrak ulang yang serupa):
+${args.existingMemory}
+
+Percakapan:
+${args.conversation}
+
+Kategori:
+- personal: identitas, kondisi tetap, preferensi hidup (cth: "alergi kopi", "kerja remote")
+- pattern: kebiasaan/pola berulang (cth: "senin selalu berat", "lebih semangat malam")
+- moment: pencapaian/momen penting (cth: "lulus marathon pertama 5 Mei")
+- preference: cara komunikasi/dukungan yang disukai (cth: "suka di-push, bukan ditenangkan")
+
+Aturan:
+- Hanya fakta dengan confidence ≥ 0.7
+- BUKAN kondisi sementara (mood/energi/tidur hari ini)
+- BUKAN parafrase dari memory existing
+- Maks 3 entri per ekstraksi
+- Jika tidak ada fakta layak, kembalikan {"memories":[]}
+
+Kembalikan JSON PERSIS seperti ini:
+{"memories":[{"category":"personal|pattern|moment|preference","content":"kalimat fakta singkat","confidence":0.0}]}`;
+
+// =============================================================
 // Notifikasi singkat (Haiku)
 // =============================================================
 export const NOTIF_MORNING = (args: { name: string; streak: number }) =>
