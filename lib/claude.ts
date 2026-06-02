@@ -15,6 +15,13 @@ type CallOptions = {
   jsonMode?: boolean;
 };
 
+type StreamOptions = {
+  systemPrompt: string;
+  messages: ChatTurn[];
+  model?: string;
+  maxTokens?: number;
+};
+
 /**
  * Single source of truth untuk semua Claude API call.
  * - Prompt caching aktif (cache_control: ephemeral) di system prompt
@@ -70,4 +77,51 @@ export async function callClaude({
   }
 
   return { text, json: null, usage: response.usage };
+}
+
+/**
+ * Streaming variant — emit text deltas via async generator.
+ * Konsumer bisa pakai `for await (const chunk of streamClaude(...))`.
+ * Setelah generator selesai, baca `final()` untuk dapat full text + usage.
+ */
+export function streamClaude({
+  systemPrompt,
+  messages,
+  model = MODEL_SONNET,
+  maxTokens = 400,
+}: StreamOptions) {
+  const stream = anthropic.messages.stream({
+    model,
+    max_tokens: maxTokens,
+    system: [
+      {
+        type: "text",
+        text: systemPrompt,
+        cache_control: { type: "ephemeral" },
+      },
+    ],
+    messages: messages.slice(-10),
+  });
+
+  async function* textChunks() {
+    for await (const event of stream) {
+      if (
+        event.type === "content_block_delta" &&
+        event.delta.type === "text_delta"
+      ) {
+        yield event.delta.text;
+      }
+    }
+  }
+
+  async function final() {
+    const msg = await stream.finalMessage();
+    const text = msg.content
+      .map((c) => (c.type === "text" ? c.text : ""))
+      .join("")
+      .trim();
+    return { text, usage: msg.usage };
+  }
+
+  return { textChunks, final };
 }

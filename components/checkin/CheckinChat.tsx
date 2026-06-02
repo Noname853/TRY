@@ -29,6 +29,7 @@ type Props = {
 export function CheckinChat({ aiName, initialMessages }: Props) {
   const messages = useChatStore((s) => s.messages);
   const loading = useChatStore((s) => s.loading);
+  const streaming = useChatStore((s) => s.streaming);
   const setMessages = useChatStore((s) => s.setMessages);
   const send = useChatStore((s) => s.send);
 
@@ -95,10 +96,12 @@ export function CheckinChat({ aiName, initialMessages }: Props) {
       <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-thin -mx-1 px-1">
         {messages.map((m, i) => {
           const isUser = m.role === "user";
+          const isLast = i === messages.length - 1;
+          const showCursor = !isUser && isLast && streaming;
           return (
             <div key={i} className={`max-w-[82%] mb-2.5 ${isUser ? "ml-auto" : "mr-auto"}`}>
               <div
-                className={`py-2.5 px-3.5 text-[13px] leading-[1.55] ${
+                className={`py-2.5 px-3.5 text-[13px] leading-[1.55] whitespace-pre-wrap ${
                   isUser
                     ? "rounded-2xl rounded-br"
                     : "bg-[--color-bg-card] border border-[--color-border-base] rounded-2xl rounded-bl"
@@ -113,6 +116,9 @@ export function CheckinChat({ aiName, initialMessages }: Props) {
                 }
               >
                 {m.content}
+                {showCursor && (
+                  <span className="inline-block w-[6px] h-[14px] ml-0.5 align-middle bg-[--color-accent-teal] animate-pulse" />
+                )}
               </div>
               <div
                 className={`text-[10px] text-[--color-text-muted] mt-1 px-1 font-medium ${
@@ -124,7 +130,7 @@ export function CheckinChat({ aiName, initialMessages }: Props) {
             </div>
           );
         })}
-        {loading && (
+        {loading && !streaming && (
           <div className="max-w-[82%] mb-2.5 mr-auto">
             <div className="bg-[--color-bg-card] border border-[--color-border-base] rounded-2xl rounded-bl py-2.5 px-3.5 text-[13px] text-[--color-text-muted]">
               <span className="inline-flex gap-1">
